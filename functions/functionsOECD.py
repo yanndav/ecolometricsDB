@@ -12,50 +12,54 @@ def oecdGetDimensions(ref):
     collection = []
     category=data['structure']['name']
     structure = data['structure']['dimensions']['series']
-    named0 = structure[0]['name']
-    named1 = structure[1]['name']
-    posit0 = structure[0]['keyPosition']
-    posit1 = structure[1]['keyPosition']
+    
     for key in data['dataSets'][0]['series'].keys():
-        pos0 = int(re.sub(':.+$','',key))
-        val0 = structure[0]['values'][pos0]
+        pos = [
+            int(re.sub(':.+$','',key)),
+            int(re.sub('^.+:','',key))
+            ]
 
-        pos1 = int(re.sub('^.+:','',key))
-        val1 = structure[1]['values'][pos1]
+        val = [
+            structure[0]['values'][pos[0]],
+            structure[1]['values'][pos[1]]
+            ]
 
         dim = {
             'dataSet':ref,
             'source':'OECD',
-            'category':category,
+            'category':category
+            }
+
+        for i in range(len(val)):
+            name = structure[i]['name'].lower()
+            posit = structure[i]['keyPosition']
             
-            named0.lower():{
-                'id':val0['id'],
-                'name': val0['name'],
-                'keyPosition':posit0
-            },
-            named1.lower():{
-                'id':val1['id'],
-                'name':val1['name'],
-                'keyPosition':posit1
+            if name == 'country':
+                name = "location"
+            
+            dim[name] = {
+                'id':val[i]['id'],
+                'name':val[i]['name'],
+                'keyPosition':posit
             }
-            }
+
         collection.append(dim)
     return(collection)
 
 # Retrieving a particular dataset
 
-def oecdGetSeries(dataref,variable,country):
+def oecdGetSeries(dataref,variable,location):
     if variable['keyPosition']==0:
-        link = f"https://stats.oecd.org/SDMX-JSON/data/{dataref}/{variable['id']}.{country['id']}"
+        link = f"https://stats.oecd.org/SDMX-JSON/data/{dataref}/{variable['id']}.{location['id']}"
     else:
-        link = f"https://stats.oecd.org/SDMX-JSON/data/{dataref}/{country['id']}.{variable['id']}"
+        link = f"https://stats.oecd.org/SDMX-JSON/data/{dataref}/{location['id']}.{variable['id']}"
 
     response = requests.get(link)
     return(response.json())
 
 
-def oecdOutput(dataref,variable,country):
-    data = oecdGetSeries(dataref,variable,country)
+def oecdOutput(dataref,variable,location):
+    data = oecdGetSeries(dataref,variable,location)
     # Data
     series = [obs[0] for obs in data['dataSets'][0]['series']['0:0']['observations'].values()] # Accessing data
     years = [year['id'] for year in data['structure']['dimensions']['observation'][0]['values']]#years
@@ -67,10 +71,14 @@ def oecdOutput(dataref,variable,country):
         if meta[i]['values']:
             finalSet[meta[i]['name'].lower()] = meta[i]['values'][0]['name']
 
-    # Adding variable name & country
+    # Adding variable name & location
     structure = data['structure']['dimensions']['series']
     for i in range(len(structure)):
-        finalSet[structure[i]['name'].lower()] = structure[i]['values'][0]['name']
+        if structure[i]['values'][0]['name'] == "country":
+            tempo = "location"
+        else:
+            tempo = structure[i]['values'][0]['name']
+        finalSet[structure[i]['name'].lower()] = tempo
 
     # Adding data
     finalSet['data']={}
