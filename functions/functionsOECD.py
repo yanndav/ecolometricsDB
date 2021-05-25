@@ -10,6 +10,7 @@ def oecdGetAllData(ref):
 def oecdGetDimensions(ref):
     data = oecdGetAllData(ref)
     collection = []
+    category=data['structure']['name']
     structure = data['structure']['dimensions']['series']
     named0 = structure[0]['name']
     named1 = structure[1]['name']
@@ -25,6 +26,8 @@ def oecdGetDimensions(ref):
         dim = {
             'dataSet':ref,
             'source':'OECD',
+            'category':category,
+            
             named0.lower():{
                 'id':val0['id'],
                 'name': val0['name'],
